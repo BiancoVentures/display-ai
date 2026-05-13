@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Display AI — Governance delle Vetrine, Automatizzata</title>
+  <meta name="description" content="Display AI aiuta i brand fashion con più di 20 store a garantire coerenza e performance nelle vetrine, tracciando automaticamente l'esecuzione." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://images.unsplash.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+/* ─── RESET & TOKENS ──────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #0a0a0a;
+  --ink-2: #111111;
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --accent: #0d9488;
+  --accent-light: #14b8a8;
+  --text: #f0ede8;
+  --text-mute: #8a8680;
+  --text-dim: #555250;
+  --line: rgba(255,255,255,0.08);
+  --line-strong: rgba(255,255,255,0.14);
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.6;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+@media (pointer: coarse) { body { cursor: auto; } }
+
+/* ─── LOADER ──────────────────────────────────── */
+#loader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
+}
+#loader.hide { opacity: 0; pointer-events: none; transform: scale(1.02); }
+
+.loader-inner { text-align: center; }
+
+.loader-logo {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 2.5rem;
+}
+.loader-logo em { font-style: italic; color: var(--accent); }
+
+.loader-progress {
+  display: flex; align-items: center; gap: 1.5rem;
+  width: clamp(200px, 40vw, 360px);
+}
+
+.loader-bar {
+  flex: 1; height: 1px; background: var(--line-strong);
+  position: relative; overflow: hidden;
+}
+.loader-fill {
+  position: absolute; left: 0; top: 0; height: 100%;
+  width: 0%; background: var(--accent);
+  transition: width 0.05s linear;
+}
+.loader-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-mute);
+  min-width: 2.5rem;
+  text-align: right;
+}
+.loader-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 1.5rem;
+  letter-spacing: 0.05em;
+}
+
+/* ─── CURSOR ──────────────────────────────────── */
+.cursor-ring {
+  position: fixed; top: 0; left: 0; z-index: 9998;
+  width: 32px; height: 32px;
+  border: 1px solid rgba(13,148,136,0.6);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: transform 0.12s var(--ease-out), width 0.2s, height 0.2s, border-color 0.2s;
+}
+.cursor-dot {
+  position: fixed; top: 0; left: 0; z-index: 9998;
+  width: 4px; height: 4px;
+  background: var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.cursor-ring.hovered { width: 52px; height: 52px; border-color: var(--accent); }
+@media (pointer: coarse) { .cursor-ring, .cursor-dot { display: none; } }
+
+/* ─── GRAIN ───────────────────────────────────── */
+.grain {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; opacity: 0.035;
+  mix-blend-mode: overlay;
+}
+
+/* ─── NAV ─────────────────────────────────────── */
+#nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  transition: background 0.3s, border-bottom 0.3s;
+}
+#nav.scrolled {
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+
+.nav-inner {
+  max-width: 1280px; margin: 0 auto;
+  padding: clamp(1rem, 2.5vw, 1.5rem) clamp(1.25rem, 5vw, 3rem);
+  display: flex; align-items: center; gap: 2rem;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1.3rem; font-weight: 600;
+  color: var(--text); text-decoration: none;
+  letter-spacing: -0.01em; white-space: nowrap;
+}
+.nav-logo em { font-style: italic; color: var(--accent); }
+
+.nav-links {
+  display: flex; list-style: none; gap: clamp(1rem, 2vw, 2rem); margin-left: auto;
+}
+.nav-links a {
+  color: var(--text-mute); text-decoration: none;
+  font-size: 0.875rem; font-weight: 400;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+
+.btn-nav {
+  font-family: var(--font-body);
+  font-size: 0.8rem; font-weight: 500;
+  padding: 0.5rem 1.2rem;
+  background: var(--accent); color: #fff;
+  border-radius: 2px; text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-nav:hover { background: var(--accent-light); }
+
+.burger {
+  display: none; background: none; border: none; cursor: pointer;
+  flex-direction: column; gap: 5px; padding: 4px; margin-left: auto;
+}
+.burger span {
+  display: block; width: 22px; height: 1px; background: var(--text);
+  transition: transform 0.3s, opacity 0.3s;
+}
+.burger.open span:first-child { transform: translateY(6px) rotate(45deg); }
+.burger.open span:last-child { transform: translateY(-6px) rotate(-45deg); }
+
+.mobile-menu {
+  display: none; flex-direction: column; gap: 0;
+  background: var(--ink-2); border-top: 1px solid var(--line);
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.4s var(--ease-out);
+}
+.mobile-menu.open { max-height: 500px; }
+.mobile-link {
+  color: var(--text-mute); text-decoration: none;
+  padding: 1rem clamp(1.25rem, 5vw, 3rem);
+  font-size: 1rem; border-bottom: 1px solid var(--line);
+  transition: color 0.2s;
+}
+.mobile-link:hover { color: var(--text); }
+.mobile-cta {
+  color: var(--accent); text-decoration: none;
+  padding: 1.25rem clamp(1.25rem, 5vw, 3rem);
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .nav-links { display: none; }
+  .btn-nav { display: none; }
+  .burger { display: flex; }
+  .mobile-menu { display: flex; }
+}
+
+/* ─── HERO ────────────────────────────────────── */
+#hero {
+  position: relative; min-height: 100svh;
+  display: flex; align-items: flex-end;
+  overflow: hidden;
+}
+
+.hero-media {
+  position: absolute; inset: 0; z-index: 0;
+}
+.hero-img {
+  width: 100%; height: 100%; object-fit: cover;
+  transform: scale(1.05);
+  transition: transform 8s ease-out;
+}
+.hero-img.loaded { transform: scale(1); }
+.hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10,10,10,0.98) 0%,
+    rgba(10,10,10,0.7) 40%,
+    rgba(10,10,10,0.3) 70%,
+    rgba(10,10,10,0.15) 100%
+  );
+}
+
+.hero-body {
+  position: relative; z-index: 2;
+  max-width: 1280px; margin: 0 auto;
+  width: 100%;
+  padding: clamp(5rem, 10vw, 8rem) clamp(1.25rem, 5vw, 3rem) clamp(4rem, 8vw, 6rem);
+}
+
+.chapter-tag {
+  display: flex; align-items: center; gap: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem; color: var(--text-mute);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3.2rem, 8vw, 8rem);
+  font-weight: 600; line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 1.75rem;
+}
+.hero-title em {
+  font-style: italic; font-weight: 300;
+  color: var(--accent-light);
+  display: block;
+}
+
+.rw {
+  display: block;
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+  transition-delay: var(--d, 0ms);
+}
+.rw.visible { opacity: 1; transform: none; }
+
+.hero-sub {
+  max-width: 600px;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  font-weight: 300; color: rgba(240,237,232,0.75);
+  line-height: 1.7; margin-bottom: 2.5rem;
+}
+
+.hero-ctas { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 3.5rem; }
+
+.btn-primary {
+  font-family: var(--font-body);
+  font-size: 0.875rem; font-weight: 500;
+  padding: 0.875rem 2rem;
+  background: var(--accent); color: #fff;
+  border-radius: 2px; text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  border: none; cursor: pointer; display: inline-block;
+}
+.btn-primary:hover { background: var(--accent-light); box-shadow: 0 0 30px rgba(13,148,136,0.3); }
+
+.btn-ghost {
+  font-family: var(--font-body);
+  font-size: 0.875rem; font-weight: 400;
+  padding: 0.875rem 1.5rem;
+  color: var(--text-mute); text-decoration: none;
+  transition: color 0.2s;
+}
+.btn-ghost:hover { color: var(--text); }
+
+.btn-outline {
+  font-family: var(--font-body);
+  font-size: 0.875rem; font-weight: 500;
+  padding: 0.875rem 2rem;
+  border: 1px solid var(--line-strong); color: var(--text);
+  border-radius: 2px; text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+  display: inline-block;
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+.hero-stats { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+.hstat { display: flex; flex-direction: column; gap: 0.25rem; }
+.hstat-num {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600; line-height: 1;
+  color: var(--text);
+}
+.hstat-unit { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); margin-left: 0.1rem; }
+.hstat-label { font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono); }
+.hstat-sep { width: 1px; height: 40px; background: var(--line-strong); }
+
+.scroll-cue {
+  position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
+  z-index: 2; display: flex; flex-direction: column; align-items: center;
+}
+.scroll-line {
+  display: block; width: 1px; height: 60px;
+  background: linear-gradient(to bottom, var(--accent), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.7); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+/* ─── SECTIONS ────────────────────────────────── */
+.section { padding: clamp(5rem, 10vw, 9rem) 0; }
+.section-dark { background: var(--surface); }
+.section-cta { background: var(--ink-2); }
+
+.container {
+  max-width: 1280px; margin: 0 auto;
+  padding: 0 clamp(1.25rem, 5vw, 3rem);
+}
+
+.section-head { margin-bottom: clamp(3rem, 6vw, 5rem); }
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5.5vw, 5.5rem);
+  font-weight: 600; line-height: 1.08;
+  letter-spacing: -0.025em; color: var(--text);
+  margin-bottom: 1.5rem;
+}
+.section-title em { font-style: italic; font-weight: 300; color: var(--accent-light); }
+
+.section-sub {
+  max-width: 560px;
+  font-size: 1.05rem; color: var(--text-mute);
+  line-height: 1.7;
+}
+
+/* ─── REVEAL ANIMATIONS ───────────────────────── */
+.ri {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 0.65s var(--ease-out), transform 0.65s var(--ease-out);
+  transition-delay: var(--d, 0ms);
+}
+.ri.visible { opacity: 1; transform: none; }
+
+/* ─── PROBLEMA ────────────────────────────────── */
+.problema-layout {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start;
+}
+@media (max-width: 900px) { .problema-layout { grid-template-columns: 1fr; gap: 3rem; } }
+
+.lead {
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  font-weight: 300; line-height: 1.65;
+  color: var(--text); margin-bottom: 1.5rem;
+}
+.body-text { font-size: 1rem; color: var(--text-mute); line-height: 1.75; margin-bottom: 1rem; }
+
+.pain-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 600px) { .pain-cards { grid-template-columns: 1fr; } }
+
+.pain-card {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1.5rem;
+  transition: border-color 0.2s, transform 0.25s;
+}
+.pain-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.pain-icon { color: var(--accent); margin-bottom: 0.875rem; }
+.pain-card h3 { font-size: 0.95rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text); }
+.pain-card p { font-size: 0.85rem; color: var(--text-mute); line-height: 1.65; }
+
+/* ─── COME FUNZIONA ───────────────────────────── */
+.flow-wrap {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: start;
+}
+@media (max-width: 900px) { .flow-wrap { grid-template-columns: 1fr; gap: 3rem; } }
+
+.flow-steps { display: flex; flex-direction: column; gap: 0; }
+.flow-step {
+  display: flex; gap: 1.5rem; align-items: flex-start;
+}
+.flow-connector {
+  width: 1px; height: 2.5rem; background: var(--line-strong);
+  margin-left: 1.35rem;
+}
+.step-num {
+  font-family: var(--font-mono); font-size: 0.7rem;
+  color: var(--accent); min-width: 24px; padding-top: 0.15rem;
+}
+.step-body h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.4rem; color: var(--text); }
+.step-body p { font-size: 0.875rem; color: var(--text-mute); line-height: 1.7; }
+
+.flow-visual {
+  position: sticky; top: 7rem;
+  border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--line);
+}
+.flow-visual img { width: 100%; height: 360px; object-fit: cover; display: block; }
+.flow-caption {
+  padding: 1.25rem 1.5rem;
+  font-size: 0.72rem; color: var(--text-dim);
+  line-height: 1.6; border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+/* ─── BENTO GRID ──────────────────────────────── */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 280px;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 4px; overflow: hidden;
+}
+
+.bento-card {
+  background: var(--surface-2);
+  padding: 2rem; position: relative;
+  overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+  transition: background 0.2s;
+}
+.bento-card:hover { background: var(--surface); }
+
+.bento-large { grid-column: span 2; grid-row: span 1; }
+.bento-wide { grid-column: span 2; grid-row: span 1; }
+
+.bento-img-wrap { position: absolute; inset: 0; z-index: 0; }
+.bento-img-wrap img { width: 100%; height: 100%; object-fit: cover; opacity: 0.4; }
+.bento-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.3) 60%, transparent 100%);
+}
+
+.bento-content { position: relative; z-index: 1; }
+.bento-tag { font-family: var(--font-mono); font-size: 0.65rem; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 0.5rem; }
+.bento-card h3 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text); }
+.bento-card p { font-size: 0.82rem; color: var(--text-mute); line-height: 1.65; }
+
+.bento-icon { color: var(--accent); margin-bottom: 1rem; }
+
+@media (max-width: 800px) {
+  .bento { grid-template-columns: 1fr; grid-auto-rows: auto; }
+  .bento-large, .bento-wide { grid-column: span 1; }
+  .bento-card { min-height: 220px; }
+}
+
+/* ─── VS TABLE ────────────────────────────────── */
+.vs-table {
+  border: 1px solid var(--line);
+  border-radius: 4px; overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.vs-header, .vs-row {
+  display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+}
+.vs-header:last-child, .vs-row:last-child { border-bottom: none; }
+
+.vs-header { background: var(--surface-2); }
+.vs-col-h {
+  padding: 1rem 1.25rem; font-size: 0.72rem;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-mute);
+}
+.highlight-h { color: var(--accent); }
+
+.vs-row { transition: background 0.15s; }
+.vs-row:hover { background: rgba(255,255,255,0.02); }
+.vs-row > div { padding: 1rem 1.25rem; color: var(--text-mute); }
+.vs-label { color: var(--text); font-weight: 400; }
+.highlight-c { color: var(--text); }
+.yes { color: var(--accent-light); }
+.no { color: var(--text-dim); }
+
+@media (max-width: 700px) {
+  .vs-header, .vs-row { grid-template-columns: 1.2fr 1fr; }
+  .vs-header > :nth-child(4), .vs-row > :nth-child(4),
+  .vs-header > :nth-child(3), .vs-row > :nth-child(3) { display: none; }
+}
+
+/* ─── PRICING ─────────────────────────────────── */
+.pricing-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem; margin-bottom: 3rem;
+}
+@media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; } }
+
+.pricing-card {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 2rem 1.75rem;
+  display: flex; flex-direction: column;
+  transition: border-color 0.2s;
+}
+.pricing-card:hover { border-color: var(--line-strong); }
+.pricing-featured {
+  border-color: var(--accent);
+  background: rgba(13,148,136,0.06);
+}
+
+.pricing-badge {
+  font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1.5rem;
+}
+.pricing-price { margin-bottom: 1.5rem; }
+.price-amount {
+  display: block; font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600;
+  color: var(--text); line-height: 1.1; margin-bottom: 0.4rem;
+}
+.price-period { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
+
+.pricing-features {
+  list-style: none; display: flex; flex-direction: column; gap: 0.6rem;
+  margin-bottom: 1.5rem; flex: 1;
+}
+.pricing-features li {
+  font-size: 0.875rem; color: var(--text-mute);
+  padding-left: 1.25rem; position: relative;
+}
+.pricing-features li::before {
+  content: '→'; position: absolute; left: 0;
+  color: var(--accent); font-size: 0.75rem;
+}
+.pricing-note { font-size: 0.78rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 1.5rem; }
+
+.pricing-math {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 1.75rem 2rem;
+}
+.math-label {
+  font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-mute); margin-bottom: 1.25rem;
+}
+.math-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem 0; border-bottom: 1px solid var(--line);
+  font-size: 0.875rem; color: var(--text-mute); gap: 1rem;
+}
+.math-total { border-bottom: none; padding-top: 1rem; font-weight: 500; color: var(--text); }
+.math-val { font-family: var(--font-mono); font-size: 0.875rem; white-space: nowrap; }
+.math-cost { color: var(--text-dim); }
+.accent { color: var(--accent-light); }
+
+/* ─── QUOTES RAIL ─────────────────────────────── */
+.quotes-rail {
+  display: flex; gap: 1.5rem;
+  overflow-x: auto; padding-bottom: 1rem;
+  scrollbar-width: none; cursor: grab;
+}
+.quotes-rail::-webkit-scrollbar { display: none; }
+.quotes-rail.dragging { cursor: grabbing; }
+
+.quote-card {
+  min-width: clamp(280px, 45vw, 420px);
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 4px; padding: 2rem;
+  flex-shrink: 0; display: flex; flex-direction: column; gap: 1.25rem;
+}
+.quote-score { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+blockquote { font-family: var(--font-display); font-size: clamp(1rem, 2vw, 1.2rem); font-style: italic; font-weight: 300; color: var(--text); line-height: 1.7; flex: 1; }
+.quote-author { margin-top: auto; }
+.quote-name { font-size: 0.9rem; font-weight: 500; color: var(--text); }
+.quote-role { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+.rail-hint { font-size: 0.7rem; color: var(--text-dim); text-align: center; margin-top: 1.5rem; letter-spacing: 0.05em; }
+
+/* ─── CHI SIAMO ───────────────────────────────── */
+.chi-layout {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center;
+}
+@media (max-width: 900px) { .chi-layout { grid-template-columns: 1fr; gap: 3rem; } }
+
+.chi-values { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 2rem; }
+.value-item { display: flex; gap: 1rem; align-items: flex-start; font-size: 0.9rem; color: var(--text-mute); }
+.value-item .mono { font-size: 0.8rem; min-width: 18px; padding-top: 0.1rem; }
+
+.chi-image { border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+.chi-image img { width: 100%; height: 480px; object-fit: cover; display: block; }
+
+/* ─── CTA SECTION ─────────────────────────────── */
+.cta-block { max-width: 740px; margin: 0 auto; text-align: center; }
+.cta-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 6rem);
+  font-weight: 600; line-height: 1.05;
+  letter-spacing: -0.025em; color: var(--text);
+  margin-bottom: 1.25rem;
+}
+.cta-title em { font-style: italic; font-weight: 300; color: var(--accent-light); }
+.cta-sub { font-size: 1rem; color: var(--text-mute); margin-bottom: 3rem; line-height: 1.7; }
+
+.cta-form { text-align: left; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+.form-input, .form-textarea {
+  width: 100%; padding: 0.875rem 1rem;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 2px; color: var(--text);
+  font-family: var(--font-body); font-size: 0.9rem; font-weight: 300;
+  transition: border-color 0.2s;
+  outline: none;
+}
+.form-input::placeholder, .form-textarea::placeholder { color: var(--text-dim); }
+.form-input:focus, .form-textarea:focus { border-color: var(--accent); }
+.form-textarea { resize: vertical; margin-bottom: 1rem; }
+
+.btn-full { width: 100%; justify-content: center; text-align: center; }
+.form-note { font-size: 0.72rem; color: var(--text-dim); text-align: center; margin-top: 1rem; letter-spacing: 0.03em; }
+
+/* ─── FOOTER ──────────────────────────────────── */
+#footer { background: var(--ink-2); border-top: 1px solid var(--line); padding: 5rem 0 2rem; }
+
+.footer-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 3rem; margin-bottom: 4rem;
+}
+@media (max-width: 900px) { .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; } }
+@media (max-width: 500px) { .footer-grid { grid-template-columns: 1fr; } }
+
+.footer-logo {
+  font-family: var(--font-display);
+  font-size: 1.5rem; font-weight: 600;
+  color: var(--text); margin-bottom: 0.75rem;
+}
+.footer-logo em { font-style: italic; color: var(--accent); }
+.footer-tagline { font-size: 0.9rem; color: var(--text-mute); line-height: 1.6; margin-bottom: 1rem; }
+.footer-backer { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.05em; }
+
+.footer-head { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 1.25rem; }
+.footer-links { display: flex; flex-direction: column; gap: 0.6rem; }
+.footer-links a { color: var(--text-mute); text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
+.footer-links a:hover { color: var(--text); }
+
+.footer-contact { display: flex; flex-direction: column; gap: 0.5rem; }
+.footer-contact a { color: var(--accent-light); text-decoration: none; font-size: 0.875rem; }
+.footer-note { font-size: 0.78rem; color: var(--text-dim); }
+
+.footer-bottom {
+  border-top: 1px solid var(--line); padding-top: 2rem;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+}
+.footer-bottom .mono { font-size: 0.72rem; color: var(--text-dim); }
+.footer-version { color: var(--accent); }
+
+/* ─── UTILS ───────────────────────────────────── */
+.mono { font-family: var(--font-mono); }
+
+/* ─── REDUCED MOTION ──────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .ri { opacity: 1; transform: none; }
+  .rw { opacity: 1; transform: none; }
+}
+
+  </style>
+</head>
+<body>
+
+  <div id="loader">
+    <div class="loader-inner">
+      <div class="loader-logo">Display <em>AI</em></div>
+      <div class="loader-progress">
+        <div class="loader-bar"><div id="loaderFill" class="loader-fill"></div></div>
+        <span id="loaderCount" class="loader-count">000</span>
+      </div>
+      <p class="loader-label">Inizializzazione governance vetrine…</p>
+    </div>
+  </div>
+
+  <div id="cursorRing" class="cursor-ring"></div>
+  <div id="cursorDot" class="cursor-dot"></div>
+  <canvas id="grain" class="grain" aria-hidden="true"></canvas>
+
+  <nav id="nav">
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo">Display <em>AI</em></a>
+      <ul class="nav-links">
+        <li><a href="#problema">Il Problema</a></li>
+        <li><a href="#come-funziona">Come Funziona</a></li>
+        <li><a href="#prodotto">Prodotto</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#chi-siamo">Chi Siamo</a></li>
+      </ul>
+      <a href="#contatti" class="btn-nav cta-mag">Richiedi Pilot</a>
+      <button id="burger" class="burger" aria-label="Toggle menu"><span></span><span></span></button>
+    </div>
+    <div id="mobileMenu" class="mobile-menu">
+      <a href="#problema" class="mobile-link">Il Problema</a>
+      <a href="#come-funziona" class="mobile-link">Come Funziona</a>
+      <a href="#prodotto" class="mobile-link">Prodotto</a>
+      <a href="#pricing" class="mobile-link">Pricing</a>
+      <a href="#chi-siamo" class="mobile-link">Chi Siamo</a>
+      <a href="#contatti" class="mobile-cta">Richiedi Pilot →</a>
+    </div>
+  </nav>
+
+  <section id="hero">
+    <div class="hero-media">
+      <img src="https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?auto=format&fit=crop&q=80&w=2400" alt="Fashion store window display" class="hero-img" loading="eager" />
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-body">
+      <p class="chapter-tag ri"><span class="mono">01</span>&nbsp;&nbsp;Governance Vetrine</p>
+      <h1 class="hero-title">
+        <span class="rw" style="--d:0ms">Ogni vetrina,</span>
+        <em class="rw" style="--d:140ms">verificata.</em>
+        <span class="rw" style="--d:300ms">Ogni campagna,</span>
+        <em class="rw" style="--d:440ms">misurata.</em>
+      </h1>
+      <p class="hero-sub ri" style="--d:580ms">Display AI chiude il feedback loop tra HQ e store. Il Visual Merchandiser invia il target. Lo store carica la foto via WhatsApp. L'AI verifica, punteggia e corregge — entro 72 ore.</p>
+      <div class="hero-ctas ri" style="--d:720ms">
+        <a href="#contatti" class="btn-primary cta-mag">Inizia il Pilot Gratuito</a>
+        <a href="#come-funziona" class="btn-ghost">Come funziona →</a>
+      </div>
+      <div class="hero-stats ri" style="--d:860ms">
+        <div class="hstat">
+          <span class="hstat-num counter" data-target="72">0</span><span class="hstat-unit">h</span>
+          <span class="hstat-label">Loop correttivo</span>
+        </div>
+        <div class="hstat-sep"></div>
+        <div class="hstat">
+          <span class="hstat-num counter" data-target="300">0</span><span class="hstat-unit">€</span>
+          <span class="hstat-label">Costo sopralluogo</span>
+        </div>
+        <div class="hstat-sep"></div>
+        <div class="hstat">
+          <span class="hstat-num counter" data-target="20">0</span><span class="hstat-unit">+</span>
+          <span class="hstat-label">Store soglia</span>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-cue"><span class="scroll-line"></span></div>
+  </section>
+
+  <section id="problema" class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="chapter-tag ri"><span class="mono">02</span>&nbsp;&nbsp;Il Problema</p>
+        <h2 class="section-title ri">Non sai cosa c'è<br /><em>nelle tue vetrine</em><br />adesso.</h2>
+      </div>
+      <div class="problema-layout">
+        <div class="problema-text">
+          <p class="lead ri">Il Retail Director o Head of VM di una catena fashion con 30–300 store non sa, in questo momento, se le vetrine sono allestite correttamente.</p>
+          <p class="body-text ri">Non può verificarlo senza mandare qualcuno fisicamente. I materiali arrivano — o non arrivano — senza conferma. Le linee guida vengono interpretate in modo difforme da store a store. Il dolore si ripete ogni cambio vetrina: mediamente ogni 4 settimane.</p>
+          <p class="body-text ri">Mandi le linee guida, non ricevi feedback, scopri i problemi a campagna già finita.</p>
+        </div>
+        <div class="pain-cards">
+          <div class="pain-card ri" style="--d:0ms">
+            <div class="pain-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div>
+            <h3>Nessuna visibilità</h3>
+            <p>Non esiste una mappatura aggiornata di cosa c'è in vetrina, store per store. L'HQ scopre i problemi solo dopo.</p>
+          </div>
+          <div class="pain-card ri" style="--d:100ms">
+            <div class="pain-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+            <h3>Sopralluoghi insostenibili</h3>
+            <p>Ogni visita fisica costa 300–500 €. Su 50 store a 2 cicli/anno: fino a 50.000 € l'anno solo per controllare le vetrine.</p>
+          </div>
+          <div class="pain-card ri" style="--d:200ms">
+            <div class="pain-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+            <h3>WhatsApp non scala</h3>
+            <p>Funziona a 10 store. A 50 hai foto sparse in 30 chat, nessuna tracciabilità, nessun confronto col visual target.</p>
+          </div>
+          <div class="pain-card ri" style="--d:300ms">
+            <div class="pain-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
+            <h3>Zero storico</h3>
+            <p>Nessuna memoria delle configurazioni passate. Ogni campagna ricomincia da zero. Impossibile capire cosa ha funzionato.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="come-funziona" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <p class="chapter-tag ri"><span class="mono">03</span>&nbsp;&nbsp;Come Funziona</p>
+        <h2 class="section-title ri">Dal visual target<br /><em>alla correzione,</em><br />in 72 ore.</h2>
+      </div>
+      <div class="flow-wrap">
+        <div class="flow-steps">
+          <div class="flow-step ri" style="--d:0ms">
+            <div class="step-num mono">01</div>
+            <div class="step-body">
+              <h3>HQ carica il visual target</h3>
+              <p>Il Visual Merchandiser carica l'immagine della vetrina da replicare, seleziona gli store coinvolti e allega la checklist operativa.</p>
+            </div>
+          </div>
+          <div class="flow-connector"></div>
+          <div class="flow-step ri" style="--d:140ms">
+            <div class="step-num mono">02</div>
+            <div class="step-body">
+              <h3>Lo store riceve via WhatsApp</h3>
+              <p>Lo store manager riceve un link univoco via WhatsApp. Nessuna app da scaricare. Allestisce e carica la foto dal mobile.</p>
+            </div>
+          </div>
+          <div class="flow-connector"></div>
+          <div class="flow-step ri" style="--d:280ms">
+            <div class="step-num mono">03</div>
+            <div class="step-body">
+              <h3>L'AI assegna il compliance score</h3>
+              <p>Display AI confronta la foto con il visual target. Assegna un punteggio 0–100, individua i gap e suggerisce azioni correttive specifiche.</p>
+            </div>
+          </div>
+          <div class="flow-connector"></div>
+          <div class="flow-step ri" style="--d:420ms">
+            <div class="step-num mono">04</div>
+            <div class="step-body">
+              <h3>Loop chiuso entro 72h</h3>
+              <p>Lo store corregge e ricarica. L'HQ vede il ranking in tempo reale. Il Retail Director riceve il report settimanale con best e worst performer.</p>
+            </div>
+          </div>
+        </div>
+        <div class="flow-visual ri" style="--d:200ms">
+          <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&q=80&w=1200" alt="Fashion store window visual merchandising" loading="lazy" />
+          <div class="flow-caption mono">Prima: linee guida inviate, execution non verificabile.<br/>Con Display AI: ogni store visto, misurato, corretto.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="prodotto" class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="chapter-tag ri"><span class="mono">04</span>&nbsp;&nbsp;Il Prodotto</p>
+        <h2 class="section-title ri">Un layer operativo<br /><em>tra HQ e store.</em></h2>
+        <p class="section-sub ri">Display AI non sostituisce il Visual Merchandiser. Chiude il feedback loop rotto — trasformando foto operative in dati di governance.</p>
+      </div>
+      <div class="bento">
+        <div class="bento-card bento-large ri">
+          <div class="bento-img-wrap">
+            <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&q=80&w=1200" alt="Fashion retail store window display" loading="lazy" />
+            <div class="bento-overlay"></div>
+          </div>
+          <div class="bento-content">
+            <span class="bento-tag mono">Feature Core</span>
+            <h3>AI Compliance Check</h3>
+            <p>Confronto automatico foto store vs. visual target. Score 0–100, gap specifici, azioni correttive. Concordanza AI vs. umano target: 80%+.</p>
+          </div>
+        </div>
+        <div class="bento-card ri" style="--d:100ms">
+          <div class="bento-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+          <h3>Dashboard HQ</h3>
+          <p>Vista centralizzata su tutta la rete. Ranking store, campagne attive, storico vetrine, alert su store a rischio. Tutto da una schermata.</p>
+        </div>
+        <div class="bento-card ri" style="--d:200ms">
+          <div class="bento-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+          <h3>Notifiche WhatsApp</h3>
+          <p>Lo store riceve tutto via WhatsApp. Zero app da installare. Il canale che conosce già — con struttura, compliance e accountability.</p>
+        </div>
+        <div class="bento-card bento-wide ri" style="--d:100ms">
+          <div class="bento-img-wrap">
+            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=1200" alt="Analytics dashboard retail performance" loading="lazy" />
+            <div class="bento-overlay"></div>
+          </div>
+          <div class="bento-content">
+            <span class="bento-tag mono">Release 1</span>
+            <h3>Storico Vetrine & Analytics</h3>
+            <p>Memoria storica proprietaria. Benchmark cross-store. I dati che crescono con te e che nessun sistema custom avrà mai.</p>
+          </div>
+        </div>
+        <div class="bento-card ri" style="--d:300ms">
+          <div class="bento-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <h3>Gamification Store</h3>
+          <p>Ranking tra store manager. Contest vetrine mensili. La competizione orizzontale tra pari che mantiene alta l'adozione senza pressione dall'alto.</p>
+        </div>
+        <div class="bento-card ri" style="--d:400ms">
+          <div class="bento-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <h3>Report Retail Director</h3>
+          <p>Report settimanale automatico: compliance per store, issue aperte, velocità di correzione, best performer. Il dato che giustifica il budget.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="versus" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <p class="chapter-tag ri"><span class="mono">05</span>&nbsp;&nbsp;Perché Display AI</p>
+        <h2 class="section-title ri">Non sei YOOBIC.<br /><em>Non sei Excel.</em><br />Sei nel mezzo.</h2>
+      </div>
+      <div class="vs-table ri">
+        <div class="vs-header">
+          <div></div>
+          <div class="mono vs-col-h">WhatsApp + Excel</div>
+          <div class="mono vs-col-h highlight-h">Display AI</div>
+          <div class="mono vs-col-h">YOOBIC / IWD</div>
+        </div>
+        <div class="vs-row"><div class="vs-label">Costo annuale</div><div>Gratis (+ nascosto)</div><div class="highlight-c">800–1.800 €/store</div><div>3.000–5.000+ €/store</div></div>
+        <div class="vs-row"><div class="vs-label">Onboarding</div><div>Immediato</div><div class="highlight-c">2 settimane</div><div>2–6 mesi</div></div>
+        <div class="vs-row"><div class="vs-label">Scala su 50+ store</div><div class="no">✗ Collassa</div><div class="highlight-c yes">✓ Progettato per questo</div><div class="yes">✓ Ma overkill</div></div>
+        <div class="vs-row"><div class="vs-label">AI compliance score</div><div class="no">✗ Nessuno</div><div class="highlight-c yes">✓ Nativo</div><div class="yes">✓ Solo tier alto</div></div>
+        <div class="vs-row"><div class="vs-label">Storico vetrine</div><div class="no">✗ Foto sparse</div><div class="highlight-c yes">✓ Memoria proprietaria</div><div class="yes">✓ Con ERP</div></div>
+        <div class="vs-row"><div class="vs-label">Target</div><div>1–10 store</div><div class="highlight-c">20–300 store · 15–200M€</div><div>300+ store · 50M€+</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="chapter-tag ri"><span class="mono">06</span>&nbsp;&nbsp;Pricing</p>
+        <h2 class="section-title ri">Parte da zero.<br /><em>Si paga con il risparmio</em><br />del primo anno.</h2>
+        <p class="section-sub ri">Subscription annuale per store attivo. Il sopralluogo fisico costa 300–500 €. Display AI su 50 store si ripaga con i primi 2 cicli eliminati.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card ri" style="--d:0ms">
+          <div class="pricing-badge mono">Pilot</div>
+          <div class="pricing-price"><span class="price-amount">Gratuito</span><span class="price-period">2–3 mesi · max 20 store</span></div>
+          <ul class="pricing-features">
+            <li>Setup manuale Display AI</li>
+            <li>WhatsApp link per store</li>
+            <li>Dashboard HQ read-only</li>
+            <li>Report settimanale</li>
+            <li>1 campagna completa</li>
+          </ul>
+          <p class="pricing-note">Per brand 15–80 store. Richiede LOI firmata. Investimento in evidenza, non in revenue.</p>
+          <a href="#contatti" class="btn-outline cta-mag">Inizia il Pilot</a>
+        </div>
+        <div class="pricing-card pricing-featured ri" style="--d:160ms">
+          <div class="pricing-badge mono">Core SaaS</div>
+          <div class="pricing-price"><span class="price-amount">800–1.100 €</span><span class="price-period">/store/anno + setup 2.500–4.000 €</span></div>
+          <ul class="pricing-features">
+            <li>Tutto del Pilot</li>
+            <li>Workflow campagne autonomo</li>
+            <li>Storico vetrine</li>
+            <li>Ranking store + gamification</li>
+            <li>AI compliance check</li>
+            <li>Report mensile Retail Director</li>
+          </ul>
+          <p class="pricing-note">Per catene 30–200 store. CAC payback &lt;8 mesi. Gross margin 60–70%.</p>
+          <a href="#contatti" class="btn-primary cta-mag">Parla con Noi</a>
+        </div>
+        <div class="pricing-card ri" style="--d:320ms">
+          <div class="pricing-badge mono">Advanced</div>
+          <div class="pricing-price"><span class="price-amount">1.200–1.800 €</span><span class="price-period">/store/anno + setup 5.000–8.000 €</span></div>
+          <ul class="pricing-features">
+            <li>Tutto del Core</li>
+            <li>Catalogo SKU campagna</li>
+            <li>A/B test vetrine</li>
+            <li>Gamification avanzata + contest</li>
+            <li>Analytics benchmark cross-store</li>
+            <li>Human QA managed</li>
+          </ul>
+          <p class="pricing-note">Per brand 80–300 store. Gross margin 70–80% a regime con AI automation.</p>
+          <a href="#contatti" class="btn-outline cta-mag">Contattaci</a>
+        </div>
+      </div>
+      <div class="pricing-math ri">
+        <div class="math-label mono">ROI calcolato — anno 1, 50 store, Core SaaS</div>
+        <div class="math-row"><span>Sopralluoghi eliminati (2 cicli × 50 store × 400€)</span><span class="math-val">40.000 €</span></div>
+        <div class="math-row"><span>Costo Display AI Core (50 store × 900€ + setup 3.500€)</span><span class="math-val">− 48.500 €</span></div>
+        <div class="math-row math-total"><span>Break-even anno 1. Dal secondo anno risparmio netto annuo</span><span class="math-val accent">→ 36.500 €/anno</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="voci" class="section section-dark">
+    <div class="container">
+      <div class="section-head">
+        <p class="chapter-tag ri"><span class="mono">07</span>&nbsp;&nbsp;Le Voci del Mercato</p>
+        <h2 class="section-title ri">Il dolore è reale.<br /><em>Lo abbiamo sentito</em><br />da chi lo vive.</h2>
+      </div>
+      <div class="quotes-rail" id="quotesRail">
+        <div class="quote-card">
+          <div class="quote-score mono">Urgenza 4/5</div>
+          <blockquote>"Il problema è reale: area manager con controlli fisici sempre meno sostenibili. Il KPI critico è performance e controllo delle vetrine."</blockquote>
+          <div class="quote-author"><div class="quote-name">Massimo Petrella</div><div class="quote-role mono">Founder · Tailoradio Srl</div></div>
+        </div>
+        <div class="quote-card">
+          <div class="quote-score mono">Urgenza 4.5/5</div>
+          <blockquote>"La distanza HQ–store genera disallineamento anche in realtà strutturate come Benetton. Il proprietario tratta il VM come task operativo, non come leva strategica."</blockquote>
+          <div class="quote-author"><div class="quote-name">Marco Moschini</div><div class="quote-role mono">Chief Innovation Officer · Benetton</div></div>
+        </div>
+        <div class="quote-card">
+          <div class="quote-score mono">Urgenza 3.5/5</div>
+          <blockquote>"Il vertical eyewear è ideale: 600+ visite/store/anno eliminate. Il benchmark di pricing è comparabile al costo dello store-check fisico."</blockquote>
+          <div class="quote-author"><div class="quote-name">Matteo Suman</div><div class="quote-role mono">Customer Sales Operations · Safilo</div></div>
+        </div>
+        <div class="quote-card">
+          <div class="quote-score mono">Insight chiave</div>
+          <blockquote>"Il KPI credibile è correlare le SKU esposte con le vendite via A/B test tra store comparabili. Questo trasforma il VM da costo a leva strategica misurabile."</blockquote>
+          <div class="quote-author"><div class="quote-name">Marco Moschini</div><div class="quote-role mono">CIO · Benetton Group</div></div>
+        </div>
+      </div>
+      <div class="rail-hint mono">← scorri →</div>
+    </div>
+  </section>
+
+  <section id="chi-siamo" class="section">
+    <div class="container">
+      <div class="chi-layout">
+        <div class="chi-text">
+          <p class="chapter-tag ri"><span class="mono">08</span>&nbsp;&nbsp;Chi Siamo</p>
+          <h2 class="section-title ri">Un prodotto<br /><em>Bianco Ventures.</em></h2>
+          <p class="lead ri">Display AI è sviluppato da Bianco Ventures, studio di venture building italiano focalizzato su SaaS operativi per il retail mid-market europeo.</p>
+          <p class="body-text ri">Il prodotto è il risultato di oltre 5 interviste approfondite con Retail Director, Head of VM e Innovation Officer di brand fashion. Ogni feature è progettata per validare una sola assunzione: che un brand fashion sia disposto a cambiare workflow quando il time-to-value è in settimane, non mesi.</p>
+          <p class="body-text ri">Stiamo cercando i primi 3–5 design partner per il pilot. Se gestisci una rete di 20–300 store e il loop HQ–store è rotto, parliamo.</p>
+          <div class="chi-values ri">
+            <div class="value-item"><span class="mono accent">→</span><span>Zero hype sull'AI. Solo risultati operativi misurabili.</span></div>
+            <div class="value-item"><span class="mono accent">→</span><span>Onboarding in 2 settimane, non 6 mesi.</span></div>
+            <div class="value-item"><span class="mono accent">→</span><span>Il founder rivede ogni outreach prima dell'invio.</span></div>
+          </div>
+        </div>
+        <div class="chi-image ri">
+          <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&q=80&w=1200" alt="Modern office team collaboration" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contatti" class="section section-cta">
+    <div class="container">
+      <div class="cta-block">
+        <p class="chapter-tag ri"><span class="mono">09</span>&nbsp;&nbsp;Inizia Oggi</p>
+        <h2 class="cta-title ri">Pronto a vedere<br /><em>ogni vetrina?</em></h2>
+        <p class="cta-sub ri">Il pilot è gratuito. 2–3 mesi, max 20 store, 1 campagna completa. Partiamo in 2 settimane dalla firma della LOI.</p>
+        <div class="cta-form ri">
+          <div class="form-row">
+            <input type="text" placeholder="Nome e Cognome" class="form-input" />
+            <input type="email" placeholder="Email aziendale" class="form-input" />
+          </div>
+          <div class="form-row">
+            <input type="text" placeholder="Brand / Azienda" class="form-input" />
+            <input type="text" placeholder="N° store (approssimativo)" class="form-input" />
+          </div>
+          <textarea placeholder="Descrivi brevemente il tuo processo attuale (WhatsApp? Excel? Visite fisiche?)" class="form-textarea" rows="3"></textarea>
+          <button class="btn-primary btn-full cta-mag" id="submitBtn">Richiedi il Pilot Gratuito →</button>
+          <p class="form-note mono">Risponderemo entro 48h. Nessun commerciale. Solo una conversazione operativa.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer id="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">Display <em>AI</em></div>
+          <p class="footer-tagline">Governance delle vetrine,<br />automatizzata.</p>
+          <p class="footer-backer mono">Un prodotto Bianco Ventures</p>
+        </div>
+        <div class="footer-links">
+          <h4 class="footer-head mono">Prodotto</h4>
+          <a href="#come-funziona">Come Funziona</a>
+          <a href="#prodotto">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#versus">vs Competitor</a>
+        </div>
+        <div class="footer-links">
+          <h4 class="footer-head mono">Azienda</h4>
+          <a href="#chi-siamo">Chi Siamo</a>
+          <a href="#voci">Interviste</a>
+          <a href="#contatti">Contatti</a>
+        </div>
+        <div class="footer-contact">
+          <h4 class="footer-head mono">Contatti</h4>
+          <a href="mailto:hello@displayai.io">hello@displayai.io</a>
+          <p class="footer-note">Italia · Francia · Spagna · Benelux</p>
+          <p class="footer-note">Target: brand fashion 20–300 store</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span class="mono">© <span id="year"></span> Display AI — Bianco Ventures. All rights reserved.</span>
+        <span class="mono footer-version">v0.1 — Pilot Phase</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+/* ─── MOTION.JS — Display AI ─────────────────── */
+
+// ── YEAR
+document.getElementById('year').textContent = new Date().getFullYear();
+
+// ── GRAIN CANVAS
+(function() {
+  const canvas = document.getElementById('grain');
+  const ctx = canvas.getContext('2d');
+  let frame = 0;
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function render() {
+    const w = canvas.width, h = canvas.height;
+    const img = ctx.createImageData(w, h);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = Math.random() * 255 | 0;
+      d[i] = d[i+1] = d[i+2] = v; d[i+3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    frame++;
+    if (frame % 3 === 0) requestAnimationFrame(render);
+    else requestAnimationFrame(render);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  render();
+})();
+
+// ── LOADER
+(function() {
+  const loader = document.getElementById('loader');
+  const fill = document.getElementById('loaderFill');
+  const count = document.getElementById('loaderCount');
+  let p = 0;
+  const interval = setInterval(() => {
+    p += Math.random() * 4 + 1;
+    if (p >= 100) { p = 100; clearInterval(interval); done(); }
+    fill.style.width = p + '%';
+    count.textContent = String(Math.floor(p)).padStart(3, '0');
+  }, 30);
+  function done() {
+    setTimeout(() => {
+      loader.classList.add('hide');
+      setTimeout(() => loader.remove(), 700);
+      triggerHeroReveal();
+    }, 200);
+  }
+})();
+
+// ── HERO REVEAL
+function triggerHeroReveal() {
+  const img = document.querySelector('.hero-img');
+  if (img) img.classList.add('loaded');
+  document.querySelectorAll('.rw, .ri').forEach(el => {
+    if (el.closest('#hero')) el.classList.add('visible');
+  });
+  // Trigger counters after hero visible
+  setTimeout(startCounters, 1000);
+}
+
+// ── NAV SCROLL
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 60);
+}, { passive: true });
+
+// ── BURGER
+const burger = document.getElementById('burger');
+const mobileMenu = document.getElementById('mobileMenu');
+if (burger && mobileMenu) {
+  burger.addEventListener('click', () => {
+    burger.classList.toggle('open');
+    mobileMenu.classList.toggle('open');
+  });
+  mobileMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      burger.classList.remove('open');
+      mobileMenu.classList.remove('open');
+    });
+  });
+}
+
+// ── SMOOTH SCROLL
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const id = a.getAttribute('href');
+    const el = document.querySelector(id);
+    if (el) {
+      e.preventDefault();
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+// ── INTERSECTION OBSERVER (reveal)
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      revealObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+
+document.querySelectorAll('.ri, .rw').forEach(el => {
+  if (!el.closest('#hero')) revealObs.observe(el);
+});
+
+// ── COUNTERS
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+function animateCounter(el) {
+  const target = parseInt(el.dataset.target, 10);
+  const duration = 1400;
+  const start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    el.textContent = Math.floor(easeOut(progress) * target);
+    if (progress < 1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+
+function startCounters() {
+  document.querySelectorAll('.counter').forEach(el => animateCounter(el));
+}
+
+// Also trigger counters when hero stats come into view (fallback)
+const counterObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      startCounters();
+      counterObs.disconnect();
+    }
+  });
+}, { threshold: 0.5 });
+const heroStats = document.querySelector('.hero-stats');
+if (heroStats) counterObs.observe(heroStats);
+
+// ── CUSTOM CURSOR (desktop only)
+if (window.matchMedia('(pointer: fine)').matches) {
+  const ring = document.getElementById('cursorRing');
+  const dot = document.getElementById('cursorDot');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  (function raf() {
+    rx += (mx - rx) * 0.14;
+    ry += (my - ry) * 0.14;
+    ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+    dot.style.left = mx + 'px'; dot.style.top = my + 'px';
+    requestAnimationFrame(raf);
+  })();
+  const hovers = document.querySelectorAll('a, button, .pain-card, .bento-card, .pricing-card, .quote-card');
+  hovers.forEach(el => {
+    el.addEventListener('mouseenter', () => ring.classList.add('hovered'));
+    el.addEventListener('mouseleave', () => ring.classList.remove('hovered'));
+  });
+}
+
+// ── CTA MAGNETIC
+if (window.matchMedia('(pointer: fine)').matches) {
+  document.querySelectorAll('.cta-mag').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const r = btn.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width / 2) * 0.25;
+      const dy = (e.clientY - r.top - r.height / 2) * 0.25;
+      btn.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+    btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+  });
+}
+
+// ── PARALLAX HERO
+window.addEventListener('scroll', () => {
+  const img = document.querySelector('.hero-img');
+  if (!img) return;
+  const y = window.scrollY;
+  img.style.transform = `scale(1.05) translateY(${y * 0.25}px)`;
+}, { passive: true });
+
+// ── DRAG SCROLL (quotes rail)
+const rail = document.getElementById('quotesRail');
+if (rail) {
+  let isDown = false, startX, scrollLeft;
+  rail.addEventListener('mousedown', e => {
+    isDown = true; rail.classList.add('dragging');
+    startX = e.pageX - rail.offsetLeft; scrollLeft = rail.scrollLeft;
+  });
+  rail.addEventListener('mouseleave', () => { isDown = false; rail.classList.remove('dragging'); });
+  rail.addEventListener('mouseup', () => { isDown = false; rail.classList.remove('dragging'); });
+  rail.addEventListener('mousemove', e => {
+    if (!isDown) return; e.preventDefault();
+    const x = e.pageX - rail.offsetLeft;
+    rail.scrollLeft = scrollLeft - (x - startX) * 1.5;
+  });
+}
+
+// ── FORM SUBMIT
+const submitBtn = document.getElementById('submitBtn');
+if (submitBtn) {
+  submitBtn.addEventListener('click', () => {
+    const inputs = document.querySelectorAll('.form-input, .form-textarea');
+    let valid = true;
+    inputs.forEach(i => { if (!i.value.trim()) { i.style.borderColor = 'rgba(239,68,68,0.6)'; valid = false; } else i.style.borderColor = ''; });
+    if (valid) {
+      submitBtn.textContent = '✓ Richiesta inviata — ti contatteremo entro 48h';
+      submitBtn.style.background = '#059669';
+      submitBtn.disabled = true;
+    }
+  });
+}
+
+  </script>
+</body>
+</html>
